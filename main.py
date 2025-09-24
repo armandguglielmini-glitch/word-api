@@ -6,27 +6,24 @@ import tempfile
 
 app = FastAPI()
 
-@app.post("/modify-docx")
-async def modify_docx(
-    file: UploadFile,
-    old_text: str = Form(...),
-    new_text: str = Form(...)
-):
+@app.post("/fill-template")
+async def fill_template(file: UploadFile, data: str = Form(...)):
+    """
+    - file : modèle Word (.docx) avec {{variables}}
+    - data : JSON envoyé par Retool (clé/valeurs à injecter dans le docx)
+    """
 
-    # Charger le template
-    doc = DocxTemplate("templates/mon_modele.docx")
-    
-    # Données à injecter
-    context = {
-        "NOM": "Dupont",
-        "MONTANT": "150 000 €",
-        "DATE": "24/09/2025"
-    }
-    
-    # Injecter les données dans le document
+    # Charger le modèle Word
+    doc = DocxTemplate(file.file)
+
+    # Parser le JSON reçu depuis Retool
+    context = json.loads(data)
+
+    # Rendre le template avec les données
     doc.render(context)
-    
-    # Sauvegarder le document final
-    doc.save("outputs/document_final.docx")
+
+    # Sauvegarder le doc modifié dans un fichier temporaire
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".docx")
+    doc.save(tmp.name)
 
     return FileResponse(tmp.name, filename="modified.docx")
